@@ -1,7 +1,9 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { STATUSES, TaskCard, groupByStatus, useTasks, type TaskStatus } from '@/entities/task'
+import { DeleteTaskButton } from '@/features/task-delete'
 import { Button, Spinner } from '@/shared/ui'
 import { KanbanColumn } from './KanbanColumn'
+import { TaskDetailsModal } from './TaskDetailsModal'
 
 const ACCENTS: Record<TaskStatus, string> = {
   todo: 'bg-slate-400',
@@ -11,7 +13,10 @@ const ACCENTS: Record<TaskStatus, string> = {
 
 export const KanbanBoard = () => {
   const { data, isLoading, isError, error, refetch } = useTasks()
+  const [selectedId, setSelectedId] = useState<number | null>(null)
+
   const groups = useMemo(() => groupByStatus(data ?? []), [data])
+  const selectedTask = data?.find((t) => t.id === selectedId)
 
   if (isLoading) {
     return (
@@ -34,18 +39,33 @@ export const KanbanBoard = () => {
   }
 
   return (
-    <div className="grid gap-4 md:grid-cols-3">
-      {STATUSES.map(({ value, label }) => (
-        <KanbanColumn key={value} title={label} count={groups[value].length} accent={ACCENTS[value]}>
-          {groups[value].length ? (
-            groups[value].map((task) => <TaskCard key={task.id} task={task} />)
-          ) : (
-            <p className="flex flex-1 items-center justify-center rounded-xl border-2 border-dashed border-slate-200 py-8 text-sm text-slate-400 dark:border-slate-800">
-              Нет задач
-            </p>
-          )}
-        </KanbanColumn>
-      ))}
-    </div>
+    <>
+      <div className="grid gap-4 md:grid-cols-3">
+        {STATUSES.map(({ value, label }) => (
+          <KanbanColumn key={value} title={label} count={groups[value].length} accent={ACCENTS[value]}>
+            {groups[value].length ? (
+              groups[value].map((task) => (
+                <TaskCard
+                  key={task.id}
+                  task={task}
+                  onClick={() => setSelectedId(task.id)}
+                  actions={<DeleteTaskButton iconOnly taskId={task.id} taskTitle={task.title} />}
+                />
+              ))
+            ) : (
+              <p className="flex flex-1 items-center justify-center rounded-xl border-2 border-dashed border-slate-200 py-8 text-sm text-slate-400 dark:border-slate-800">
+                Нет задач
+              </p>
+            )}
+          </KanbanColumn>
+        ))}
+      </div>
+
+      <TaskDetailsModal
+        key={selectedId ?? 'none'}
+        task={selectedTask}
+        onClose={() => setSelectedId(null)}
+      />
+    </>
   )
 }
