@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 
 interface ModalProps {
@@ -8,19 +8,32 @@ interface ModalProps {
   children: ReactNode
 }
 
+const stack: symbol[] = []
+
 export const Modal = ({ open, onClose, title, children }: ModalProps) => {
+  const onCloseRef = useRef(onClose)
+  useEffect(() => {
+    onCloseRef.current = onClose
+  })
+
   useEffect(() => {
     if (!open) return
 
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
-    document.addEventListener('keydown', onKey)
+    const id = Symbol()
+    stack.push(id)
     document.body.style.overflow = 'hidden'
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && stack[stack.length - 1] === id) onCloseRef.current()
+    }
+    document.addEventListener('keydown', onKey)
 
     return () => {
       document.removeEventListener('keydown', onKey)
-      document.body.style.overflow = ''
+      stack.splice(stack.indexOf(id), 1)
+      if (stack.length === 0) document.body.style.overflow = ''
     }
-  }, [open, onClose])
+  }, [open])
 
   if (!open) return null
 
@@ -35,11 +48,13 @@ export const Modal = ({ open, onClose, title, children }: ModalProps) => {
         className="max-h-[90vh] w-full overflow-y-auto rounded-t-2xl bg-white p-6 shadow-xl sm:max-w-lg sm:rounded-2xl dark:bg-slate-900"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">{title}</h2>
+        <div className="mb-4 flex items-start justify-between gap-2">
+          <h2 className="min-w-0 text-lg font-semibold break-words text-slate-900 dark:text-slate-100">
+            {title}
+          </h2>
           <button
             onClick={onClose}
-            className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800"
+            className="shrink-0 rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800"
             aria-label="Закрыть"
           >
             ✕

@@ -12,3 +12,4 @@ export interface Task {
 
 export type CreateTaskDto = Omit<Task, 'id'>
 export type UpdateTaskDto = Partial<Omit<Task, 'id' | 'createdAt'>>
+export type TaskFormValues = Pick<Task, 'title' | 'description' | 'status' | 'priority'>
