@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { STATUSES, TaskCard, groupByStatus, useTasks, type TaskStatus } from '@/entities/task'
 import { DeleteTaskButton } from '@/features/task-delete'
+import { applyFilters, isFiltersActive, type TaskFilters } from '@/features/task-filters'
 import { Button, Spinner } from '@/shared/ui'
 import { KanbanColumn } from './KanbanColumn'
 import { TaskDetailsModal } from './TaskDetailsModal'
@@ -11,12 +12,19 @@ const ACCENTS: Record<TaskStatus, string> = {
   done: 'bg-emerald-500',
 }
 
-export const KanbanBoard = () => {
+interface KanbanBoardProps {
+  filters: TaskFilters
+  onResetFilters: () => void
+}
+
+export const KanbanBoard = ({ filters, onResetFilters }: KanbanBoardProps) => {
   const { data, isLoading, isError, error, refetch } = useTasks()
   const [selectedId, setSelectedId] = useState<number | null>(null)
 
-  const groups = useMemo(() => groupByStatus(data ?? []), [data])
+  const visible = useMemo(() => applyFilters(data ?? [], filters), [data, filters])
+  const groups = useMemo(() => groupByStatus(visible), [visible])
   const selectedTask = data?.find((t) => t.id === selectedId)
+  const filtered = isFiltersActive(filters)
 
   if (isLoading) {
     return (
@@ -40,6 +48,15 @@ export const KanbanBoard = () => {
 
   return (
     <>
+      {filtered && visible.length === 0 && (
+        <div className="mb-4 flex flex-col items-center gap-2 rounded-2xl border border-slate-200 bg-white p-6 text-center sm:flex-row sm:justify-between sm:text-left dark:border-slate-800 dark:bg-slate-900">
+          <p className="text-slate-600 dark:text-slate-400">По заданным условиям ничего не найдено</p>
+          <Button variant="secondary" onClick={onResetFilters}>
+            Сбросить фильтры
+          </Button>
+        </div>
+      )}
+
       <div className="grid gap-4 md:grid-cols-3">
         {STATUSES.map(({ value, label }) => (
           <KanbanColumn key={value} title={label} count={groups[value].length} accent={ACCENTS[value]}>
@@ -54,7 +71,7 @@ export const KanbanBoard = () => {
               ))
             ) : (
               <p className="flex flex-1 items-center justify-center rounded-xl border-2 border-dashed border-slate-200 py-8 text-sm text-slate-400 dark:border-slate-800">
-                Нет задач
+                {filtered ? 'Ничего не найдено' : 'Нет задач'}
               </p>
             )}
           </KanbanColumn>
